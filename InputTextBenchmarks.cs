@@ -3,13 +3,14 @@ using System.Runtime.InteropServices;
 using System.Text;
 using BenchmarkDotNet.Attributes;
 using Hexa.NET.ImGui;
+using HexaGen.Runtime;
 
 namespace ImguiBenchmarks;
 
 [SimpleJob]
 public class InputTextBenchmarks
 {
-    private const int BatchSize = 32;
+    private const int BatchSize = 64;
     private const int BufferSize = 64;
 
     private readonly string[] _labelStrings = new string[BatchSize];
@@ -126,8 +127,10 @@ public class InputTextBenchmarks
         {
             for (int i = 0; i < BatchSize; ++i)
             {
-                var bytes = Encoding.UTF8.GetBytes(_buffer);
-                Marshal.Copy(bytes, 0, new IntPtr(_byteBufferPtr), StrLen(bytes));
+                int pStrSize0 = Utils.GetByteCountUTF8(_buffer);
+                int pStrOffset0 = Utils.EncodeStringUTF8(_buffer, _byteBufferPtr, pStrSize0);
+                _byteBufferPtr[pStrOffset0] = 0;
+                
                 ImGui.InputText(_labelStrings[i], _byteBufferPtr, BufferSize, ImGuiInputTextFlags.EnterReturnsTrue);
             }
             
@@ -149,14 +152,16 @@ public class InputTextBenchmarks
         {
             for (int i = 0; i < BatchSize; ++i)
             {
-                var bytes = Encoding.UTF8.GetBytes(_buffer);
-                Marshal.Copy(bytes, 0, new IntPtr(_byteBufferPtr), StrLen(bytes));
+                int pStrSize0 = Utils.GetByteCountUTF8(_buffer);
+                int pStrOffset0 = Utils.EncodeStringUTF8(_buffer, _byteBufferPtr, pStrSize0);
+                _byteBufferPtr[pStrOffset0] = 0;
+                
                 ImGui.InputText(_labelStrings[i], _byteBufferPtr, BufferSize, ImGuiInputTextFlags.EnterReturnsTrue);
                 if (ImGui.IsItemDeactivatedAfterEdit())
                 {
                     // Will never get here in the benchmark, but the vast majority of frames in practice will not take
                     // this branch so this is realistic.
-                    _buffer = Marshal.PtrToStringUTF8(new IntPtr(_byteBufferPtr)) ?? "";
+                    _buffer = Utils.DecodeStringUTF8(_byteBufferPtr);
                 }
             }
             
@@ -178,10 +183,13 @@ public class InputTextBenchmarks
         {
             for (int i = 0; i < BatchSize; ++i)
             {
-                var bytes = Encoding.UTF8.GetBytes(_buffer);
-                Marshal.Copy(bytes, 0, new IntPtr(_byteBufferPtr), StrLen(bytes));
+                int pStrSize0 = Utils.GetByteCountUTF8(_buffer);
+                int pStrOffset0 = Utils.EncodeStringUTF8(_buffer, _byteBufferPtr, pStrSize0);
+                _byteBufferPtr[pStrOffset0] = 0;
+                
                 ImGui.InputText(_labelStrings[i], _byteBufferPtr, BufferSize, ImGuiInputTextFlags.EnterReturnsTrue);
-                _buffer = Marshal.PtrToStringUTF8(new IntPtr(_byteBufferPtr)) ?? "";
+
+                _buffer = Utils.DecodeStringUTF8(_byteBufferPtr);
             }
             
             ImGui.End();
